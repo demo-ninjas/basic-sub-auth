@@ -4,13 +4,15 @@ from .sub_factory import get_subscription
 
 __GLOBAL_TOKEN_KEYS = None
 
-def function_req_to_request(req: func.HttpRequest, override_path:str = None) -> Request:
+def function_req_to_request(req: func.HttpRequest, override_path:str = None, disguised_hosts:bool = True) -> Request:
     """
     Convert an Azure Function request to a Request object.
     """
-    host = req.headers.get('x-host', None)
-    if not host:
-        host = req.headers.get('disguised-host', None)
+    host = None
+    if disguised_hosts:
+        host = req.headers.get('x-host', None)
+        if not host:
+            host = req.headers.get('disguised-host', None)
     if not host:
         host = req.headers.get('Host', None)
 
@@ -75,7 +77,7 @@ def get_sub_from_function_req(req: func.HttpRequest) -> Subscription:
     return subscription
 
 
-def validate_function_request(req: func.HttpRequest, override_path:str = None, redirect_on_fail:bool = False, default_fail_status:int = 401, redirect_url:str = None, allow_cors:bool = True, include_reason:bool = True) -> tuple[bool, Subscription, func.HttpResponse]:
+def validate_function_request(req: func.HttpRequest, override_path:str = None, redirect_on_fail:bool = False, default_fail_status:int = 401, redirect_url:str = None, allow_cors:bool = True, include_reason:bool = True, allow_disguised_host:bool = True) -> tuple[bool, Subscription, func.HttpResponse]:
     """
     Validate the request
     """
@@ -97,7 +99,7 @@ def validate_function_request(req: func.HttpRequest, override_path:str = None, r
     reason = None
     if sub is not None:
         # Check if the subscription is allowed to access the resource
-        request = function_req_to_request(req, override_path)
+        request = function_req_to_request(req, override_path, allow_disguised_host)
         allowed, reason = sub.is_allowed(request)
         if allowed:
             # Check if the request has the subscription in the cookie
