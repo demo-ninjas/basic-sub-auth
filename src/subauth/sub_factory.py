@@ -32,7 +32,9 @@ def get_subscription(sub_id: str, entra_user:bool) -> Subscription:
     
 
     if entra_user:
-        sub_data = _COSMOS_DB_CONNECTION.get_items_by_query(f"SELECT * FROM c WHERE c.entra_username = '{lower_sub_id}' AND c.is_entra_user = true")
+        sub_res = _COSMOS_DB_CONNECTION.get_items_by_query(f"SELECT * FROM c WHERE c.entra_username = '{lower_sub_id}' AND c.is_entra_user = true")
+        if sub_res and len(sub_res) > 0:
+            sub_data = sub_res[0]
     else:
         sub_data = _COSMOS_DB_CONNECTION.get_item(lower_sub_id)
     
