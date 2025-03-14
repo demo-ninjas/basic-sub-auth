@@ -18,7 +18,7 @@ def function_req_to_request(req: func.HttpRequest, override_path:str = None) -> 
         raise ValueError("Path not found in request")
     if path.startswith("http://") or path.startswith("https://"):
         path = path[path.find("/", 8):]
-        
+
     headers = req.headers
     if not headers:
         headers = {}
@@ -103,7 +103,12 @@ def validate_function_request(req: func.HttpRequest, override_path:str = None, r
 
     ## Subscription is not allowed to access the resource
     if redirect_on_fail:
-        # Redirect to the auth URL
+        # Redirect to the auth URL (if entra is enabled)
+        import os
+        if os.environ.get("ENTRA_AUTHORITY") is None:
+            # No entra authority, so we can't redirect
+            return False, sub, func.HttpResponse("Not Allowed", status_code=default_fail_status)
+        
         auth_url = generate_entra_auth_url(req, redirect_uri=redirect_url)
         response = func.HttpResponse("Redirecting...", status_code=302)
         response.headers["Location"] = auth_url
@@ -119,9 +124,9 @@ def get_entra_user_for_request(req: func.HttpRequest) -> dict[str, any]:
 
     ## Check that ENTRA_AUTHORITY is set
     if os.environ.get("ENTRA_AUTHORITY") is None:
-        raise RuntimeError("ENTRA_AUTHORITY is not set in the environment variables")
+        return None
     if os.environ.get("ENTRA_CLIENT_ID") is None:
-        raise RuntimeError("ENTRA_CLIENT_ID is not set in the environment variables")
+        return None
 
     if __GLOBAL_TOKEN_KEYS is None:
         import requests

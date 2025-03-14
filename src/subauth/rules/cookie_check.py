@@ -43,16 +43,11 @@ class CookieCheck(Rule):
                     if req_cookie_val.startswith(cookie_value[:-1]):
                         return True
                 else:
-                    arr = cookie_value.split('.')
-                    req_arr = req_cookie_val.split('.')
-                    ismatch = True
-                    for i in range(len(arr)):
-                        if arr[i] == '*' or arr[i] == req_arr[i]:
-                            continue
-                        ismatch = False
-                        break
-                    if ismatch:
-                        return True
+                    arr = cookie_value.split('*')   ## We assume only one wildcard in this case
+                    if len(arr) != 2:
+                        return False  # Unsupported wildcard expression
+                    return req_cookie_val.startswith(arr[0]) and req_cookie_val.endswith(arr[1])
+
         
         for cookie_regex in self.cookie_regexes:
             if cookie_regex.match(req_cookie_val):

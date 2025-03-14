@@ -56,8 +56,11 @@ class Subscription:
         """
         Check if the subscription is expired.
         """
-        if self.expiry == -1:
+        if self.expiry == -1:       ## -1 == Never Expire
             return False
+        if self.expiry == -2:       ## -2 == Always Expire (technically, this isn't needed, as the below will always be true if this is negative, but it's here for clarity)
+            return True
+        
         return datetime.now().timestamp() > self.expiry
 
     def expiry_date(self) -> str:

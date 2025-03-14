@@ -34,6 +34,10 @@ class QueryCheck(Rule):
         for query_value in self.query_values:
             if req_query_val == query_value:
                 return True
+            
+            if query_value == '*': # Any value match
+                return True
+
             if '*' in query_value:
                 if query_value.startswith('*'):
                     if req_query_val.endswith(query_value[1:]):
@@ -42,16 +46,11 @@ class QueryCheck(Rule):
                     if req_query_val.startswith(query_value[:-1]):
                         return True
                 else:
-                    arr = query_value.split('.')
-                    req_arr = req_query_val.split('.')
-                    ismatch = True
-                    for i in range(len(arr)):
-                        if arr[i] == '*' or arr[i] == req_arr[i]:
-                            continue
-                        ismatch = False
-                        break
-                    if ismatch:
-                        return True
+                    arr = query_value.split('*')   ## We assume only one wildcard in this case
+                    if len(arr) != 2:
+                        return False  # Unsupported wildcard expression
+                    return req_query_val.startswith(arr[0]) and req_query_val.endswith(arr[1])
+
         for query_regex in self.query_regexes:
             if query_regex.match(req_query_val):
                 return True

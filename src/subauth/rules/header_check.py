@@ -34,6 +34,10 @@ class HeaderCheck(Rule):
         for header_value in self.header_values:
             if req_header_val == header_value:
                 return True
+            
+            if header_value == '*': # Any value match
+                return True
+            
             if '*' in header_value:
                 if header_value.startswith('*'):
                     if req_header_val.endswith(header_value[1:]):
@@ -42,16 +46,11 @@ class HeaderCheck(Rule):
                     if req_header_val.startswith(header_value[:-1]):
                         return True
                 else:
-                    arr = header_value.split('.')
-                    req_arr = req_header_val.split('.')
-                    ismatch = True
-                    for i in range(len(arr)):
-                        if arr[i] == '*' or arr[i] == req_arr[i]:
-                            continue
-                        ismatch = False
-                        break
-                    if ismatch:
-                        return True
+                    arr = header_value.split('*')   ## We assume only one wildcard in this case
+                    if len(arr) != 2:
+                        return False  # Unsupported wildcard expression
+                    return req_header_val.startswith(arr[0]) and req_header_val.endswith(arr[1])
+                    
         for header_regex in self.header_regexes:
             if header_regex.match(req_header_val):
                 return True

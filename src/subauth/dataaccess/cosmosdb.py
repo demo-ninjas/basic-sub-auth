@@ -11,12 +11,12 @@ from azure.core.exceptions import ServiceRequestError
 CONTAINER_CONNECTIONS = {}
 CACHE_CONTAINER_CONNECTIONS = os.environ.get('CACHE_COSMOS_CONTAINER_CONNECTIONS', "true").lower() == "true"
 
-def _connect_to_cosmos_container(container:str, db:str, endpoint:str = None, create_if_not_exists:bool = True, partition_key:str = "/id") -> ContainerProxy:
+def _connect_to_cosmos_container(container:str, db:str = None, endpoint:str = None, create_if_not_exists:bool = True, partition_key:str = "/id") -> ContainerProxy:
     global CONTAINER_CONNECTIONS
     global CACHE_CONTAINER_CONNECTIONS
     
     if not endpoint:
-        endpoint = os.environ.get('COSMOS_ENDPOINT', os.environ.get('COSMOS_ACCOUNT_HOST', None))
+        endpoint = os.environ.get('COSMOS_ENDPOINT', os.environ.get('COSMOS_ACCOUNT_HOST', os.environ.get('SUBSCRIPTIONS_COSMOS_ENDPOINT', None)))
     if not endpoint:
         raise ValueError("CosmosDB endpoint was not provided and default endpoint not found in environment [COSMOS_ENDPOINT]")
 
