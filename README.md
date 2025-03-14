@@ -5,6 +5,22 @@ This is a simple library that implements a very basic authorisation of HTTP requ
 
 This library is intended to protect simple demos that do not expose any *real* secrets - aka. don't use this for an actual production app, it was never built to defend against complex attack vectors.
 
+## Contents
+
+- [Configuring Subscriptions](#configuring-subscriptions)
+    - [Entra User Fields](#entra-user-fields)
+- [Subscription Rules](#subscription-rules)
+    - [Host Rule](#host-rule)
+    - [Path Rule](#path-rule)
+    - [Header Rule](#header-rule)
+    - [Query Rule](#query-rule)
+    - [Cookie Rule](#cookie-rule)
+    - [Method Rule](#method-rule)
+    - [Date Rule](#date-rule)
+- [Configuring CosmosDB](#configuring-cosmosdb)
+- [Configuring Entra](#configuring-entra)
+
+
 ## Configuring Subscriptions
 
 The library currently supports a cosmosdb backed subscription store.
@@ -68,7 +84,7 @@ A rule is defined by 2 key fields, plus any number of optional rule specific fie
 
 There is one additional field that is available to all rules: `allow: true|false` - This field defines whether this is an `allow` type or `deny` type rule.
 If `allow` is `true`, then the user request *must* match the rule to be allowed to proceed to the next rule (otherwise it will be denied)
-If `allow` is `false`, then ifi the request matches the rule, the request will be immediately denied (otherwise it will proceed to the next rule)
+If `allow` is `false`, then if the request matches the rule, the request will be immediately denied (otherwise it will proceed to the next rule)
 
 The available rule types are: 
 
@@ -283,4 +299,4 @@ If you wish to enable Entra users to login, you must specify the following envir
 * `ENTRA_CLIENT_SECRET` - The client secret for this Registered App Client
 * `ENTRA_APP_NAME` - The Name of this Registered App
 * `ENTRA_SCOPES` [Optional] - If not specified, will default to `User.Read` 
-* `ENTRA_REDIRECT_URI` [Optipnal] - If not specified, will default to `/api/auth-callback`
+* `ENTRA_REDIRECT_URI` [Optional] - If not specified, will default to `/api/auth-callback`
