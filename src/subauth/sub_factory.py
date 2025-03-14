@@ -37,12 +37,14 @@ def get_subscription(sub_id: str, entra_user:bool) -> Subscription:
         sub_data = _COSMOS_DB_CONNECTION.get_item(lower_sub_id)
     
     if not sub_data:
-        raise ValueError(f"Subscription {sub_id} not found")
+        return None
+    
     sub = Subscription(sub_data)
     if not sub:
-        raise ValueError(f"Subscription {sub_id} is invalid")
+        return None
+    
     if sub.is_expired():
-        raise ValueError(f"Subscription {sub_id} is expired")
+        return None
     
     if entra_user:
         _ENTRA_UN_TO_ID_CACHE[lower_sub_id] = sub.id
