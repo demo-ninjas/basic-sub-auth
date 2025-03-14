@@ -71,22 +71,22 @@ class Subscription:
             return "Never"
         return datetime.fromtimestamp(self.expiry).strftime('%Y-%m-%d %H:%M:%S')
     
-    def is_allowed(self, req:Request) -> bool:
+    def is_allowed(self, req:Request) -> tuple[bool, str]:
         if self.is_expired():
-            return False
+            return False, "Subscription has expired"
         
         if self.rules is None or len(self.rules) == 0:
-            return False    ## Not allowed to have a sub with no rules defined
+            return False, "Subscription has no rules"    ## Not allowed to have a sub with no rules defined
         
         for rule in self.rules:
             matches = rule.matches(req)
             if rule.allow and not matches:
-                return False
+                return False, f"Request does not match ALLOW rule {rule.name}"
             elif not rule.allow and matches:
-                return False
+                return False, f"Request matches DENY rule {rule.name}"
             
         # If all allowed rules are matched, and no denied rules are matched, return True
-        return True
+        return True, "OK"
             
             
     def __repr__(self):

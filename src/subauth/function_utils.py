@@ -70,7 +70,7 @@ def get_sub_from_function_req(req: func.HttpRequest) -> Subscription:
     return subscription
 
 
-def validate_function_request(req: func.HttpRequest, override_path:str = None, redirect_on_fail:bool = False, default_fail_status:int = 401, redirect_url:str = None, allow_cors:bool = True) -> tuple[bool, Subscription, func.HttpResponse]:
+def validate_function_request(req: func.HttpRequest, override_path:str = None, redirect_on_fail:bool = False, default_fail_status:int = 401, redirect_url:str = None, allow_cors:bool = True, include_reason:bool = True) -> tuple[bool, Subscription, func.HttpResponse]:
     """
     Validate the request
     """
@@ -89,10 +89,12 @@ def validate_function_request(req: func.HttpRequest, override_path:str = None, r
 
     # Check for the subscription
     sub = get_sub_from_function_req(req)
+    reason = None
     if sub is not None:
         # Check if the subscription is allowed to access the resource
         request = function_req_to_request(req, override_path)
-        if sub.is_allowed(request):
+        allowed, reason = sub.is_allowed(request)
+        if allowed:
             # Check if the request has the subscription in the cookie
             if request.cookie("subscription") is None:
                 # Set the subscription in the cookie
@@ -112,9 +114,14 @@ def validate_function_request(req: func.HttpRequest, override_path:str = None, r
         auth_url = generate_entra_auth_url(req, redirect_uri=redirect_url)
         response = func.HttpResponse("Redirecting...", status_code=302)
         response.headers["Location"] = auth_url
+        if reason is not None and include_reason:
+            response.headers["x-reason"] = reason
         return False, sub, response
     else:
-        return False, sub, func.HttpResponse("Not Allowed", status_code=default_fail_status)
+        response = func.HttpResponse("Not Allowed", status_code=default_fail_status)
+        if reason is not None and include_reason:
+            response.headers["x-reason"] = reason
+        return False, sub, response
 
     
 def get_entra_user_for_request(req: func.HttpRequest) -> dict[str, any]:
