@@ -1,5 +1,6 @@
 import azure.functions as func
 from .data import Subscription, Request
+from .sub_factory import get_subscription
 
 __GLOBAL_TOKEN_KEYS = None
 
@@ -41,13 +42,71 @@ def get_sub_from_function_req(req: func.HttpRequest) -> Subscription:
         sub_id = request.header("x-subscription")
     if not sub_id:
         sub_id = request.cookie("x-subscription")
-    if not sub_id:
+
+    subscription = None
+    if sub_id:
+        if sub_id.startswith("Bearer "):
+            sub_id = sub_id[7:]
+        if sub_id.startswith("BEARER "):
+            sub_id = sub_id[7:]
+        subscription = get_subscription(sub_id, False)
+
+    if not subscription:
         user = get_entra_user_for_request(req)
         if user is not None:
             sub_id = user.get("preferred_username", user.get("upn", None))
-    return sub_id
+            if sub_id is not None:
+                sub_id = sub_id.strip()
+                subscription = get_subscription(sub_id, True)
+                if subscription is not None:
+                    subscription.is_entra_user = True
+                    subscription.entra_user_claims = user
+    
+    return subscription
 
 
+def validate_function_request(req: func.HttpRequest, redirect_on_fail:bool = False, default_fail_status:int = 401, redirect_url:str = None, allow_cors:bool = True) -> tuple[bool, Subscription, func.HttpResponse]:
+    """
+    Validate the request
+    """
+    if req is None:
+        return False, None, func.HttpResponse("Invalid Request", status_code=400)
+    
+    ## Accept CORS preflight requests
+    if allow_cors and req.method == "OPTIONS":
+        response = func.HttpResponse("OK", status_code=200)
+        response.headers["Access-Control-Allow-Origin"] = req.headers.get("Origin", "*")
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Accept, Authorization, Subscription, X-Subscription"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Max-Age"] = "3600"
+        return True, None, response
+
+    # Check for the subscription
+    sub = get_sub_from_function_req(req)
+    if sub is not None:
+        # Check if the subscription is allowed to access the resource
+        request = function_req_to_request(req)
+        if sub.is_allowed(request):
+            # Check if the request has the subscription in the cookie
+            if request.cookie("subscription") is None:
+                # Set the subscription in the cookie
+                response = func.HttpResponse("ADD_THESE_HEADERS_TO_RESPONSE", status_code=0)
+                response.headers["Set-Cookie"] = f"subscription={sub.id}; Path=/; HttpOnly; SameSite=None; Secure"
+                return True, sub, response
+            return True, sub, None
+
+    ## Subscription is not allowed to access the resource
+    if redirect_on_fail:
+        # Redirect to the auth URL
+        auth_url = generate_entra_auth_url(req, redirect_uri=redirect_url)
+        response = func.HttpResponse("Redirecting...", status_code=302)
+        response.headers["Location"] = auth_url
+        return False, sub, response
+    else:
+        return False, sub, func.HttpResponse("Not Allowed", status_code=default_fail_status)
+
+    
 def get_entra_user_for_request(req: func.HttpRequest) -> dict[str, any]:
     global __GLOBAL_TOKEN_KEYS
     from jose import jwt
