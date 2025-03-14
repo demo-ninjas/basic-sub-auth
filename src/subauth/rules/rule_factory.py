@@ -19,7 +19,7 @@ def create_rule(rule_type:str, rule_name:str, allow:bool, claims:dict[str,any]) 
         return QueryCheck(claims.get("name", rule_name), vals, allow)
     elif rule_type == "path":
         vals = claims.get("values", claims.get("paths", []))
-        return PathCheck(claims.get("name", rule_name), vals, allow)
+        return PathCheck(vals, allow)
     elif rule_type == "method":
         vals = claims.get("methods", claims.get("values", []))
         return MethodCheck(vals, allow)
