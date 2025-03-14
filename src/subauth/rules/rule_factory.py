@@ -50,8 +50,8 @@ def create_rule(rule_type:str, rule_name:str, allow:bool, claims:dict[str,any]) 
                 raise ValueError(f"Invalid operator: {op}")
         return DateCheck(dt, op, allow)
     elif rule_type == "allow-all":
-        return AllowAll(allow)
+        return AllowAll()
     elif rule_type == "deny-all":
-        return DenyAll(allow)
+        return DenyAll()
     else:
         raise ValueError(f"Invalid rule type: {rule_type}")

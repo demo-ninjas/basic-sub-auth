@@ -1,6 +1,6 @@
 [project]
 name = "basic-sub-auth"
-version = "0.1.15"
+version = "0.1.16"
 authors = [
   { name="Stricko", email="adams@strickos.com" },
 ]
