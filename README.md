@@ -1,5 +1,5 @@
 
-# Basic Subscription based Aut
+# Basic Subscription based Auth
 
 This is a simple library that implements a very basic authorisation of HTTP requests based on the provision of a valid "subscription" (or a prior ENTRA login).
 
