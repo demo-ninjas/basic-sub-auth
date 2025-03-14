@@ -23,8 +23,8 @@ class HostCheck(Rule):
         self.host_regexes = []
         self.allow_localhost = allow_localhost
         if allow_localhost:
-            self.hosts.append("regex(localhost(:\d+)?)")
-            self.hosts.append("regex(127\.0\.0\.1(:\d+)?)")
+            self.host_regexes.append(compile("localhost(:\d+)?"))
+            self.host_regexes.append(compile("127\.0\.0\.1(:\d+)?"))
 
         for host in hosts:
             if host.startswith("regex(") and host.endswith(")"):
