@@ -11,7 +11,7 @@ from azure.core.exceptions import ServiceRequestError
 CONTAINER_CONNECTIONS = {}
 CACHE_CONTAINER_CONNECTIONS = os.environ.get('CACHE_COSMOS_CONTAINER_CONNECTIONS', "true").lower() == "true"
 
-def __connect_to_cosmos_container(container:str, db:str, endpoint:str = None, create_if_not_exists:bool = True, partition_key:str = "/id") -> ContainerProxy:
+def _connect_to_cosmos_container(container:str, db:str, endpoint:str = None, create_if_not_exists:bool = True, partition_key:str = "/id") -> ContainerProxy:
     global CONTAINER_CONNECTIONS
     global CACHE_CONTAINER_CONNECTIONS
     
@@ -118,7 +118,7 @@ class CosmosDBConnection:
         Connect to the CosmosDB database.
         """
         if self._container_client is None:
-            self._container_client = __connect_to_cosmos_container(self._container, self._database, self._endpoint)
+            self._container_client = _connect_to_cosmos_container(self._container, self._database, self._endpoint)
         if not self._container_client:
             raise ValueError(f"Failed to connect to CosmosDB container: {self._container}")
         return self
