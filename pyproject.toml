@@ -1,0 +1,27 @@
+[project]
+name = "basic-sub-auth"
+version = "0.1"
+authors = [
+  { name="Stricko", email="adams@strickos.com" },
+]
+description = "A simple library to enable subscription auth on demo apps without implementing a full auth solution"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    'python-jose',
+    'azure-identity',
+    'azure-cosmos',
+    'python-dotenv',
+    'requests',
+    'cachetools',
+    'azure-functions'
+]
+
+[project.urls]
+Homepage = "https://github.com/demo-ninjas/basic-sub-auth"
+Issues = "https://github.com/demo-ninjas/basic-sub-auth/issues"

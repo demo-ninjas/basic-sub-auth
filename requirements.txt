@@ -1,0 +1,7 @@
+python-jose
+azure-identity
+azure-cosmos
+azure-functions
+python-dotenv
+requests
+cachetools
