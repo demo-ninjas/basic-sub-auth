@@ -22,7 +22,18 @@ class Subscription:
         if not self.name:
             raise ValueError("Subscription name is required")
         self.description = data.get("description", None)
-        self.expiry = data.get("expiry", -1)
+        expiry_val = data.get("expiry", None)
+        if expiry_val is not None and isinstance(expiry_val, str):
+            try:
+                expiry_date = datetime.strptime(expiry_val, '%Y-%m-%d')
+                self.expiry = int(expiry_date.timestamp())
+            except ValueError:
+                raise ValueError("Invalid expiry date format, should be YYYY-MM-DD")
+        elif isinstance(expiry_val, int):
+            self.expiry = expiry_val
+        else:
+            raise ValueError("Invalid expiry date format, should be either a YYYY-MM-DD or timestamp")
+        
         self.is_entra_user = data.get("is_entra_user", False)
         self.entra_username = data.get("entra_username", None)
         self.rules = []

@@ -16,10 +16,16 @@ class HostCheck(Rule):
     """
     hosts: list[str]
     host_regexes: list[Pattern]
+    allow_localhost: bool
 
-    def __init__(self, hosts: list[str], allow: bool = True):
+    def __init__(self, hosts: list[str], allow_localhost:bool = False, allow: bool = True):
         self.hosts = []
         self.host_regexes = []
+        self.allow_localhost = allow_localhost
+        if allow_localhost:
+            self.hosts.append("regex(localhost(:\d+)?)")
+            self.hosts.append("regex(127\.0\.0\.1(:\d+)?)")
+
         for host in hosts:
             if host.startswith("regex(") and host.endswith(")"):
                 self.host_regexes.append(compile(host[6:-1]))

@@ -16,7 +16,7 @@ def __connect_to_cosmos_container(container:str, db:str, endpoint:str = None, cr
     global CACHE_CONTAINER_CONNECTIONS
     
     if not endpoint:
-        endpoint = os.environ.get('COSMOS_ENDPOINT', None)
+        endpoint = os.environ.get('COSMOS_ENDPOINT', os.environ.get('COSMOS_ACCOUNT_HOST', None))
     if not endpoint:
         raise ValueError("CosmosDB endpoint was not provided and default endpoint not found in environment [COSMOS_ENDPOINT]")
 
