@@ -8,7 +8,7 @@ def create_rule(rule_type:str, rule_name:str, allow:bool, claims:dict[str,any]) 
         vals = claims.get("values", claims.get("cookies", []))
         return CookieCheck(claims.get("name", rule_name), vals, allow)
     elif rule_type == "host":
-        vals = claims.get("hosts"  claims.get("values", []))
+        vals = claims.get("hosts", claims.get("values", []))
         allow_localhost = claims.get("allow_localhost", claims.get("allow_local", False))
         return HostCheck(vals, allow_localhost, allow)
     elif rule_type == "header":
