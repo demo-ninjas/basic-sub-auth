@@ -4,16 +4,21 @@ from .sub_factory import get_subscription
 
 __GLOBAL_TOKEN_KEYS = None
 
-def function_req_to_request(req: func.HttpRequest) -> Request:
+def function_req_to_request(req: func.HttpRequest, override_path:str = None) -> Request:
     """
     Convert an Azure Function request to a Request object.
     """
     host = req.headers.get('Host', None)
     if not host:
         raise ValueError("Host header not found in request")
-    path = req.url
+    path = override_path if override_path else req.route_params.get('path', None)
+    if path is None:
+        path = req.url
     if not path:
         raise ValueError("Path not found in request")
+    if path.startswith("http://") or path.startswith("https://"):
+        path = path[path.find("/", 8):]
+        
     headers = req.headers
     if not headers:
         headers = {}
@@ -65,7 +70,7 @@ def get_sub_from_function_req(req: func.HttpRequest) -> Subscription:
     return subscription
 
 
-def validate_function_request(req: func.HttpRequest, redirect_on_fail:bool = False, default_fail_status:int = 401, redirect_url:str = None, allow_cors:bool = True) -> tuple[bool, Subscription, func.HttpResponse]:
+def validate_function_request(req: func.HttpRequest, override_path:str = None, redirect_on_fail:bool = False, default_fail_status:int = 401, redirect_url:str = None, allow_cors:bool = True) -> tuple[bool, Subscription, func.HttpResponse]:
     """
     Validate the request
     """
@@ -86,7 +91,7 @@ def validate_function_request(req: func.HttpRequest, redirect_on_fail:bool = Fal
     sub = get_sub_from_function_req(req)
     if sub is not None:
         # Check if the subscription is allowed to access the resource
-        request = function_req_to_request(req)
+        request = function_req_to_request(req, override_path)
         if sub.is_allowed(request):
             # Check if the request has the subscription in the cookie
             if request.cookie("subscription") is None:
