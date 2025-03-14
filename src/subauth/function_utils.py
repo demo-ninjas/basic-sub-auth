@@ -8,7 +8,12 @@ def function_req_to_request(req: func.HttpRequest, override_path:str = None) -> 
     """
     Convert an Azure Function request to a Request object.
     """
-    host = req.headers.get('Host', None)
+    host = req.headers.get('x-host', None)
+    if not host:
+        host = req.headers.get('disguised-host', None)
+    if not host:
+        host = req.headers.get('Host', None)
+
     if not host:
         raise ValueError("Host header not found in request")
     path = override_path if override_path else req.route_params.get('path', None)
