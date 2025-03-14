@@ -242,6 +242,87 @@ def generate_entra_auth_url(req: func.HttpRequest, redirect_uri:str = None) -> s
     
     return auth_url
 
+
+def handle_entra_auth_callback(req: func.HttpRequest, default_redirect_url:str = None) -> func.HttpResponse:
+    import os
+    import base64
+    import msal
+
+    ## Check that ENTRA_AUTHORITY is set
+    if os.environ.get("ENTRA_AUTHORITY") is None:
+        raise RuntimeError("ENTRA_AUTHORITY is not set in the environment variables")
+    if os.environ.get("ENTRA_CLIENT_ID") is None:
+        raise RuntimeError("ENTRA_CLIENT_ID is not set in the environment variables")
+    if os.environ.get("ENTRA_CLIENT_SECRET") is None:
+        raise RuntimeError("ENTRA_CLIENT_SECRET is not set in the environment variables")
+    if os.environ.get("ENTRA_APP_NAME") is None:
+        raise RuntimeError("ENTRA_APP_NAME is not set in the environment variables")
+
+    app = msal.ClientApplication(
+        app_name=os.environ.get("ENTRA_APP_NAME"),
+        client_id=os.environ.get("ENTRA_CLIENT_ID"),
+        client_credential=os.environ.get("ENTRA_CLIENT_SECRET"),
+        authority=os.environ.get("ENTRA_AUTHORITY")
+        )
+
+
+    request = function_req_to_request(req)
+    code = request.query_param("code")
+    if code is None or len(code) == 0:
+        code  = request.header("code")
+    if code is None or len(code) == 0:
+        return func.HttpResponse(
+            body="Bad Request",
+            status_code=400
+        )
+    
+
+    result = app.acquire_token_by_authorization_code(
+        code=code,
+        scopes=_get_auth_scopes(),
+        redirect_uri=_get_auth_redirect_url(req),
+    )
+
+
+    if "error" in result:
+        return func.HttpResponse(
+            body="Not Allowed",
+            status_code=401
+        )
+    
+    
+    id_token = result.get("id_token", None)
+    if id_token is None:
+        return func.HttpResponse(
+            body="Not Allowed",
+            status_code=401
+        )
+
+
+    send_to_url = request.query_param("state")
+    if send_to_url is None or len(send_to_url) == 0:
+        send_to_url = request.header("state")
+    if send_to_url is None or len(send_to_url) == 0:
+        send_to_url = request.query_param("session_state")
+    if send_to_url is None or len(send_to_url) == 0:
+        send_to_url = request.header("session_state")
+    
+    if send_to_url is not None:
+        send_to_url = base64.urlsafe_b64decode((send_to_url+"==").encode("utf-8")).decode("utf-8")
+
+    if send_to_url is None or send_to_url == '/' or len(send_to_url) == 0:
+        send_to_url = default_redirect_url if default_redirect_url is not None else os.environ.get("DEFAULT_REDIRECT_URL", "/")
+
+    is_secure = 'Secure;' if req.url.startswith("https") else ''
+    headers = {
+        "Set-Cookie": f"Authorization={id_token};{is_secure} Path=/; Max-Age=28800", # HttpOnly;
+        "Location": send_to_url
+    }
+    return func.HttpResponse(
+        status_code=302,
+        headers=headers
+    )
+
 def _get_auth_scopes() -> list[str]:
     import os
     return os.environ.get("ENTRA_SCOPES", "User.Read").split(",")
