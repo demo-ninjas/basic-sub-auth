@@ -116,7 +116,10 @@ def validate_function_request(req: func.HttpRequest, override_path:str = None, r
         import os
         if os.environ.get("ENTRA_AUTHORITY") is None:
             # No entra authority, so we can't redirect
-            return False, sub, func.HttpResponse("Not Allowed", status_code=default_fail_status)
+            response = func.HttpResponse("Not Allowed", status_code=default_fail_status)
+            if reason is not None and include_reason:
+                response.headers["x-reason"] = reason
+            return False, sub, response
         
         auth_url = generate_entra_auth_url(req, redirect_uri=redirect_url)
         response = func.HttpResponse("Redirecting...", status_code=302)
