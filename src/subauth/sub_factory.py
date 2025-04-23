@@ -31,6 +31,7 @@ def get_subscription(sub_id: str, entra_user:bool) -> Subscription:
         _COSMOS_DB_CONNECTION = CosmosDBConnection(subscription_container_name, subscription_db_name, subscription_endpoint)
     
 
+    sub_data = None
     if entra_user:
         sub_res = _COSMOS_DB_CONNECTION.get_items_by_query(f"SELECT * FROM c WHERE c.entra_username = '{lower_sub_id}' AND c.is_entra_user = true")
         if sub_res and len(sub_res) > 0:
