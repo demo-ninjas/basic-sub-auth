@@ -9,6 +9,10 @@ def fastapi_req_to_request(req: FastApiRequest, override_path:str = None, disgui
     """
     Convert an Azure Function request to a Request object.
     """
+    if type(req) is Request:
+        return req
+    
+    
     host = None
     if disguised_hosts:
         host = req.headers.get('x-host', None)
@@ -19,6 +23,7 @@ def fastapi_req_to_request(req: FastApiRequest, override_path:str = None, disgui
 
     if not host:
         raise ValueError("Host header not found in request")
+    
     path = override_path if override_path else req.url.path
     if path is None:
         path = req.url

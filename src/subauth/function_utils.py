@@ -8,6 +8,10 @@ def function_req_to_request(req: func.HttpRequest, override_path:str = None, dis
     """
     Convert an Azure Function request to a Request object.
     """
+    if type(req) is Request:
+        return req
+    
+    
     host = None
     if disguised_hosts:
         host = req.headers.get('x-host', None)
