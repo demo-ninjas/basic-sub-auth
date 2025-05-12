@@ -1,10 +1,11 @@
-import azure.functions as func
+from azurefunctions.extensions.http.fastapi import Request as FastApiRequest, Response as FastApiResponse
+
 from .data import Subscription, Request
 from .sub_factory import get_subscription
 
 __GLOBAL_TOKEN_KEYS = None
 
-def function_req_to_request(req: func.HttpRequest, override_path:str = None, disguised_hosts:bool = True) -> Request:
+def fastapi_req_to_request(req: FastApiRequest, override_path:str = None, disguised_hosts:bool = True) -> Request:
     """
     Convert an Azure Function request to a Request object.
     """
@@ -18,7 +19,7 @@ def function_req_to_request(req: func.HttpRequest, override_path:str = None, dis
 
     if not host:
         raise ValueError("Host header not found in request")
-    path = override_path if override_path else req.route_params.get('path', None)
+    path = override_path if override_path else req.url.path
     if path is None:
         path = req.url
     if not path:
@@ -32,7 +33,7 @@ def function_req_to_request(req: func.HttpRequest, override_path:str = None, dis
     method = req.method
     if not method:
         method = "GET"
-    query = req.params
+    query = req.query_params
 
     client_ip = None
     if 'x-client-ip' in headers and headers['x-client-ip'] is not None and len(headers['x-client-ip']) > 0 and headers['x-client-ip'] != "ignore":
@@ -40,16 +41,18 @@ def function_req_to_request(req: func.HttpRequest, override_path:str = None, dis
     elif 'x-forwarded-for' in headers and headers['x-forwarded-for'] is not None and len(headers['x-forwarded-for']) > 0 and headers['x-forwarded-for'] != "ignore":
         forwarded_ips = headers['x-forwarded-for']
         client_ip = forwarded_ips.split(",")[0].strip()
-    
+    else:
+        client_ip = req.client.host if req.client else None
+
     # Create a Request object
     request = Request(method, host, path, headers, query, client_ip=client_ip)
     return request
     
-def get_sub_from_function_req(req: func.HttpRequest) -> Subscription:
+def get_sub_from_function_req(req: FastApiRequest) -> Subscription:
     """
     Get a subscription for the given request.
     """
-    request = function_req_to_request(req)
+    request = fastapi_req_to_request(req)
     sub_id = request.header("subscription")
     if not sub_id:
         sub_id = request.query_param("subscription")
@@ -84,16 +87,16 @@ def get_sub_from_function_req(req: func.HttpRequest) -> Subscription:
     return subscription
 
 
-def validate_function_request(req: func.HttpRequest, override_path:str = None, redirect_on_fail:bool = False, default_fail_status:int = 401, redirect_url:str = None, allow_cors:bool = True, include_reason:bool = True, allow_disguised_host:bool = True) -> tuple[bool, Subscription, func.HttpResponse]:
+def validate_function_request(req: FastApiRequest, override_path:str = None, redirect_on_fail:bool = False, default_fail_status:int = 401, redirect_url:str = None, allow_cors:bool = True, include_reason:bool = True, allow_disguised_host:bool = True) -> tuple[bool, Subscription, FastApiResponse]:
     """
     Validate the request
     """
     if req is None:
-        return False, None, func.HttpResponse("Invalid Request", status_code=400)
+        return False, None, FastApiResponse("Invalid Request", status_code=400)
     
     ## Accept CORS preflight requests
     if allow_cors and req.method == "OPTIONS":
-        response = func.HttpResponse("OK", status_code=200)
+        response = FastApiResponse("OK", status_code=200)
         response.headers["Access-Control-Allow-Origin"] = req.headers.get("Origin", "*")
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
         response.headers["Access-Control-Allow-Headers"] = "Content-Type, Accept, Authorization, Subscription, X-Subscription"
@@ -106,13 +109,13 @@ def validate_function_request(req: func.HttpRequest, override_path:str = None, r
     reason = None
     if sub is not None:
         # Check if the subscription is allowed to access the resource
-        request = function_req_to_request(req, override_path, allow_disguised_host)
+        request = fastapi_req_to_request(req, override_path, allow_disguised_host)
         allowed, reason = sub.is_allowed(request)
         if allowed:
             # Check if the request has the subscription in the cookie
             if request.cookie("subscription") is None:
                 # Set the subscription in the cookie
-                response = func.HttpResponse("ADD_THESE_HEADERS_TO_RESPONSE", status_code=0)
+                response = FastApiResponse("ADD_THESE_HEADERS_TO_RESPONSE", status_code=0)
                 response.headers["Set-Cookie"] = f"subscription={sub.id}; Path=/; HttpOnly; SameSite=None; Secure"
                 return True, sub, response
             return True, sub, None
@@ -123,25 +126,25 @@ def validate_function_request(req: func.HttpRequest, override_path:str = None, r
         import os
         if os.environ.get("ENTRA_AUTHORITY") is None:
             # No entra authority, so we can't redirect
-            response = func.HttpResponse("Not Allowed", status_code=default_fail_status)
+            response = FastApiResponse("Not Allowed", status_code=default_fail_status)
             if reason is not None and include_reason:
                 response.headers["x-reason"] = reason
             return False, sub, response
         
         auth_url = generate_entra_auth_url(req, redirect_uri=redirect_url)
-        response = func.HttpResponse("Redirecting...", status_code=302)
+        response = FastApiResponse("Redirecting...", status_code=302)
         response.headers["Location"] = auth_url
         if reason is not None and include_reason:
             response.headers["x-reason"] = reason
         return False, sub, response
     else:
-        response = func.HttpResponse("Not Allowed", status_code=default_fail_status)
+        response = FastApiResponse("Not Allowed", status_code=default_fail_status)
         if reason is not None and include_reason:
             response.headers["x-reason"] = reason
         return False, sub, response
 
     
-def get_entra_user_for_request(req: func.HttpRequest) -> dict[str, any]:
+def get_entra_user_for_request(req: FastApiRequest) -> dict[str, any]:
     global __GLOBAL_TOKEN_KEYS
     from jose import jwt
     import os
@@ -171,7 +174,7 @@ def get_entra_user_for_request(req: func.HttpRequest) -> dict[str, any]:
     if __GLOBAL_TOKEN_KEYS is None:
         raise RuntimeError("Unable to retrieve the Keys to validate the auth token")
     
-    request = function_req_to_request(req)
+    request = fastapi_req_to_request(req)
 
     id_token = None
     # Grab token from Cookie or Header
@@ -219,7 +222,7 @@ def get_entra_user_for_request(req: func.HttpRequest) -> dict[str, any]:
 
 
 
-def generate_entra_auth_url(req: func.HttpRequest, redirect_uri:str = None) -> str:
+def generate_entra_auth_url(req: FastApiRequest, redirect_uri:str = None) -> str:
     import base64
     import os
     import msal
@@ -250,7 +253,12 @@ def generate_entra_auth_url(req: func.HttpRequest, redirect_uri:str = None) -> s
 
     url = redirect_uri
     if url is None or len(url) == 0:
-        url = req.url[req.url.find('/', colon_idx + 3):]
+        url = req.url.path
+        if req.url.query and req.url.query != "":
+            if req.url.query.startswith("?"):
+                url += req.url.query
+            else:
+                url += "?" + req.url.query
 
     if '$host' in url:
         host =  req.headers.get("x-host", req.headers.get('disguised-host', req.headers.get('Host', "not-set")))
@@ -277,7 +285,7 @@ def generate_entra_auth_url(req: func.HttpRequest, redirect_uri:str = None) -> s
     return auth_url
 
 
-def handle_entra_auth_callback(req: func.HttpRequest, default_redirect_url:str = None) -> func.HttpResponse:
+def handle_entra_auth_callback(req: FastApiRequest, default_redirect_url:str = None) -> FastApiResponse:
     import os
     import base64
     import msal
@@ -300,12 +308,12 @@ def handle_entra_auth_callback(req: func.HttpRequest, default_redirect_url:str =
         )
 
 
-    request = function_req_to_request(req)
+    request = fastapi_req_to_request(req)
     code = request.query_param("code")
     if code is None or len(code) == 0:
         code  = request.header("code")
     if code is None or len(code) == 0:
-        return func.HttpResponse(
+        return FastApiResponse(
             body="Bad Request",
             status_code=400
         )
@@ -319,7 +327,7 @@ def handle_entra_auth_callback(req: func.HttpRequest, default_redirect_url:str =
 
 
     if "error" in result:
-        return func.HttpResponse(
+        return FastApiResponse(
             body="Not Allowed",
             status_code=401
         )
@@ -327,7 +335,7 @@ def handle_entra_auth_callback(req: func.HttpRequest, default_redirect_url:str =
     
     id_token = result.get("id_token", None)
     if id_token is None:
-        return func.HttpResponse(
+        return FastApiResponse(
             body="Not Allowed",
             status_code=401
         )
@@ -352,7 +360,7 @@ def handle_entra_auth_callback(req: func.HttpRequest, default_redirect_url:str =
         "Set-Cookie": f"Authorization={id_token};{is_secure} Path=/; Max-Age=28800", # HttpOnly;
         "Location": send_to_url
     }
-    return func.HttpResponse(
+    return FastApiResponse(
         status_code=302,
         headers=headers
     )
@@ -361,12 +369,12 @@ def _get_auth_scopes() -> list[str]:
     import os
     return os.environ.get("ENTRA_SCOPES", "User.Read").split(",")
 
-def _get_auth_redirect_url(req:func.HttpRequest) -> str:
+def _get_auth_redirect_url(req:FastApiRequest) -> str:
     import os
     
     redirect_url = os.environ.get("ENTRA_REDIRECT_URI")
     if redirect_url is None or len(redirect_url) == 0:
-        redirect_url = req.url[:req.url.find("/", 8)] + "/api/auth-callback"
+        redirect_url = req.url.scheme + "://" + req.url.hostname + ":" + str(req.url.port) + "/api/auth-callback"
     if '$host' in redirect_url:
         host =  req.headers.get("x-host", req.headers.get('disguised-host', req.headers.get('Host', "not-set")))
         redirect_url = redirect_url.replace("$host", host)

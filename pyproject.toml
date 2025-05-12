@@ -1,6 +1,6 @@
 [project]
 name = "basic-sub-auth"
-version = "0.1.18"
+version = "0.1.19"
 authors = [
   { name="Stricko", email="adams@strickos.com" },
 ]
@@ -19,7 +19,8 @@ dependencies = [
     'python-dotenv',
     'requests',
     'cachetools',
-    'azure-functions'
+    'azure-functions',
+    'azurefunctions-extensions-http-fastapi'
 ]
 
 [project.urls]

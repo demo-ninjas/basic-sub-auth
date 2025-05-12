@@ -7,14 +7,16 @@ class Request:
     headers:dict[str,str]
     query_params:dict[str,str]
     cookies:dict[str,str]
+    client_ip:str
 
-    def __init__(self, method:str, host:str, path:str, headers:dict[str,str] = {}, query_params:dict[str,str] = None, cookies:dict[str,str] = None):
+    def __init__(self, method:str, host:str, path:str, headers:dict[str,str] = {}, query_params:dict[str,str] = None, cookies:dict[str,str] = None, client_ip:str = None):
         self.method = method
         self.host = host
         self.urlpath = path
         self.headers = headers
         self.query_params = query_params
         self.cookies = cookies
+        self.client_ip = client_ip
 
     def header(self, key:str) -> str:
         """
@@ -76,3 +78,4 @@ class Request:
         if low_key in self.cookies:
             return self.cookies[low_key]
         return None
+

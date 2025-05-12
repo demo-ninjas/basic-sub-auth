@@ -7,5 +7,6 @@ from .query_check import QueryCheck
 from .path_check import PathCheck
 from .date_check import DateCheck
 from .method_check import MethodCheck
+from .client_ip_check import ClientIPCheck
 
 from .rule_factory import create_rule
