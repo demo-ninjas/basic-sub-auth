@@ -13,6 +13,7 @@ class Subscription:
     is_entra_user:bool = False
     entra_username:str = None
     entra_user_claims:dict = None
+    browser_store:bool = True
 
     def __init__(self, data:dict):
         self.id = data.get("id", None)
@@ -36,6 +37,7 @@ class Subscription:
         
         self.is_entra_user = data.get("is_entra_user", False)
         self.entra_username = data.get("entra_username", None)
+        self.browser_store = data.get("browserstore", True)
         self.rules = []
         for rule_def in data.get("rules", []):
             rule_name = rule_def.get("name", None)
@@ -87,6 +89,12 @@ class Subscription:
             
         # If all allowed rules are matched, and no denied rules are matched, return True
         return True, "OK"
+    
+    def store_sub_in_browser(self) -> bool:
+        """
+        Check if the subscription should be stored in the browser (using a cookie).
+        """
+        return self.browser_store
             
             
     def __repr__(self):

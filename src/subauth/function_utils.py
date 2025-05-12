@@ -11,7 +11,7 @@ def function_req_to_request(req: func.HttpRequest, override_path:str = None, dis
     if type(req) is Request:
         return req
     
-    
+
     host = None
     if disguised_hosts:
         host = req.headers.get('x-host', None)
@@ -114,7 +114,7 @@ def validate_function_request(req: func.HttpRequest, override_path:str = None, r
         allowed, reason = sub.is_allowed(request)
         if allowed:
             # Check if the request has the subscription in the cookie
-            if request.cookie("subscription") is None:
+            if request.cookie("subscription") is None and sub.store_sub_in_browser():
                 # Set the subscription in the cookie
                 response = func.HttpResponse("ADD_THESE_HEADERS_TO_RESPONSE", status_code=0)
                 response.headers["Set-Cookie"] = f"subscription={sub.id}; Path=/; HttpOnly; SameSite=None; Secure"
