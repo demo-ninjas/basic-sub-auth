@@ -26,6 +26,9 @@ def create_rule(rule_type:str, rule_name:str, allow:bool, claims:dict[str,any]) 
     elif rule_type == "method":
         vals = claims.get("methods", claims.get("values", []))
         return MethodCheck(vals, allow)
+    elif rule_type == "client-ip" or rule_type == "clientip" or rule_type == "ip":
+        vals = claims.get("ips", claims.get("values", []))
+        return ClientIPCheck(vals, allow)
     elif rule_type == "date":
         dt = claims.get("date", None)
         if not dt:

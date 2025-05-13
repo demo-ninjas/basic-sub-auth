@@ -41,12 +41,14 @@ def fastapi_req_to_request(req: FastApiRequest, override_path:str = None, disgui
     query = req.query_params
 
     client_ip = None
-    if 'x-client-ip' in headers and headers['x-client-ip'] is not None and len(headers['x-client-ip']) > 0 and headers['x-client-ip'] != "ignore":
+    if 'x-client-ip' in headers and headers['x-client-ip'] != "ignore":
         client_ip = headers['x-client-ip']
-    elif 'x-forwarded-for' in headers and headers['x-forwarded-for'] is not None and len(headers['x-forwarded-for']) > 0 and headers['x-forwarded-for'] != "ignore":
+
+    if client_ip is None and 'x-forwarded-for' in headers and headers['x-forwarded-for'] != "ignore":
         forwarded_ips = headers['x-forwarded-for']
         client_ip = forwarded_ips.split(",")[0].strip()
-    else:
+    
+    if client_ip is None:
         client_ip = req.client.host if req.client else None
 
     # Create a Request object
