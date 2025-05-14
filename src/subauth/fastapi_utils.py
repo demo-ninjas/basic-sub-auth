@@ -271,7 +271,10 @@ def generate_entra_auth_url(req: FastApiRequest, redirect_uri:str = None) -> str
         host =  req.headers.get("x-host", req.headers.get('disguised-host', req.headers.get('Host', "not-set")))
         url = url.replace("$host", host)
     
-    if os.environ.get("ENTRA_STATE_STRIP_API_APP_PATH", "true").lower() == "true":
+    # Use the original path if it's set
+    if req.headers.get("x-original-path", None) is not None:
+        url = req.headers.get("x-original-path", None)
+    elif os.environ.get("ENTRA_STATE_STRIP_API_APP_PATH", "true").lower() == "true":
         ## Strip the /api/app/ path from the URL (this is to handle the internal mapping happing on the edge proxy)
         if url.startswith("/api/app/"): url = url[8:]
     
