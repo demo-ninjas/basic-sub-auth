@@ -11,6 +11,8 @@ from azure.core.exceptions import ServiceRequestError
 CONTAINER_CONNECTIONS = {}
 CACHE_CONTAINER_CONNECTIONS = os.environ.get('CACHE_COSMOS_CONTAINER_CONNECTIONS', "true").lower() == "true"
 
+CHECK_COSMOS_DB_CONNECTION_ON_STARTUP = os.environ.get('CHECK_SUBSCRIPTION_COSMOS_DB_ON_STARTUP', "false").lower() == "true"
+
 def _connect_to_cosmos_container(container:str, db:str = None, endpoint:str = None, create_if_not_exists:bool = True, partition_key:str = "/id") -> ContainerProxy:
     global CONTAINER_CONNECTIONS
     global CACHE_CONTAINER_CONNECTIONS
@@ -49,7 +51,8 @@ def _connect_to_cosmos_container(container:str, db:str = None, endpoint:str = No
     ## Check if the database exists
     try:
         db_client = client.get_database_client(db)
-        db_client.read()
+        if CHECK_COSMOS_DB_CONNECTION_ON_STARTUP:
+            db_client.read()
     except ResourceNotFoundError:
         if create_if_not_exists:
             db_client = client.create_database(db)
@@ -68,7 +71,8 @@ def _connect_to_cosmos_container(container:str, db:str = None, endpoint:str = No
     ## Check if the container exists
     try:
         connection = db_client.get_container_client(container)
-        connection.read()
+        if CHECK_COSMOS_DB_CONNECTION_ON_STARTUP:
+            connection.read()
     except ResourceNotFoundError:
         if create_if_not_exists:
             connection = db_client.create_container(container, partition_key=partition_key)
