@@ -50,11 +50,11 @@ def function_req_to_request(req: func.HttpRequest, override_path:str = None, dis
     request = Request(method, host, path, headers, query, client_ip=client_ip)
     return request
     
-def get_sub_from_function_req(req: func.HttpRequest) -> Subscription:
+def get_sub_from_function_req(req: func.HttpRequest|Request) -> Subscription:
     """
     Get a subscription for the given request.
     """
-    request = function_req_to_request(req)
+    request = function_req_to_request(req) if type(req) is not Request else req
     sub_id = request.header("subscription")
     if not sub_id:
         sub_id = request.query_param("subscription")
@@ -89,7 +89,7 @@ def get_sub_from_function_req(req: func.HttpRequest) -> Subscription:
     return subscription
 
 
-def validate_function_request(req: func.HttpRequest, override_path:str = None, redirect_on_fail:bool = False, default_fail_status:int = 401, redirect_url:str = None, allow_cors:bool = True, include_reason:bool = True, allow_disguised_host:bool = True) -> tuple[bool, Subscription, func.HttpResponse]:
+def validate_function_request(req: func.HttpRequest|Request, override_path:str = None, redirect_on_fail:bool = False, default_fail_status:int = 401, redirect_url:str = None, allow_cors:bool = True, include_reason:bool = True, allow_disguised_host:bool = True) -> tuple[bool, Subscription, func.HttpResponse]:
     """
     Validate the request
     """
@@ -111,7 +111,7 @@ def validate_function_request(req: func.HttpRequest, override_path:str = None, r
     reason = None
     if sub is not None:
         # Check if the subscription is allowed to access the resource
-        request = function_req_to_request(req, override_path, allow_disguised_host)
+        request = function_req_to_request(req, override_path, allow_disguised_host) if type(req) is not Request else req
         allowed, reason = sub.is_allowed(request)
         if allowed:
             # Check if the request has the subscription in the cookie
@@ -224,7 +224,7 @@ def get_entra_user_for_request(req: func.HttpRequest) -> dict[str, any]:
 
 
 
-def generate_entra_auth_url(req: func.HttpRequest, redirect_uri:str = None) -> str:
+def generate_entra_auth_url(req: func.HttpRequest|Request, redirect_uri:str = None) -> str:
     import base64
     import os
     import msal
@@ -285,7 +285,7 @@ def generate_entra_auth_url(req: func.HttpRequest, redirect_uri:str = None) -> s
     return auth_url
 
 
-def handle_entra_auth_callback(req: func.HttpRequest, default_redirect_url:str = None) -> func.HttpResponse:
+def handle_entra_auth_callback(req: func.HttpRequest|Request, default_redirect_url:str = None) -> func.HttpResponse:
     import os
     import base64
     import msal
@@ -308,7 +308,7 @@ def handle_entra_auth_callback(req: func.HttpRequest, default_redirect_url:str =
         )
 
 
-    request = function_req_to_request(req)
+    request = function_req_to_request(req) if type(req) is not Request else req
     code = request.query_param("code")
     if code is None or len(code) == 0:
         code  = request.header("code")
@@ -369,7 +369,7 @@ def _get_auth_scopes() -> list[str]:
     import os
     return os.environ.get("ENTRA_SCOPES", "User.Read").split(",")
 
-def _get_auth_redirect_url(req:func.HttpRequest) -> str:
+def _get_auth_redirect_url(req:func.HttpRequest|Request) -> str:
     import os
     
     redirect_url = os.environ.get("ENTRA_REDIRECT_URI")

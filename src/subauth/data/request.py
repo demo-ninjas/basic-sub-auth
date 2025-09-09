@@ -79,3 +79,16 @@ class Request:
             return self.cookies[low_key]
         return None
 
+    @property
+    def url(self) -> str:
+        """
+        Get the full URL of the request.
+        """
+        scheme = "https"
+        if "x-forwarded-proto" in self.headers:
+            scheme = self.headers["x-forwarded-proto"]
+        elif "X-Forwarded-Proto" in self.headers:
+            scheme = self.headers["X-Forwarded-Proto"]
+        elif self.host in ["localhost", "127.0.0.1"] or self.host.startswith("localhost:") or self.host.startswith("127.0.0.1:"):
+            scheme = "http"
+        return f"{scheme}://{self.host}{self.urlpath}"
