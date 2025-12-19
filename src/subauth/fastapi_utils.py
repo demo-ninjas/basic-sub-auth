@@ -254,13 +254,9 @@ def generate_entra_auth_url(req: FastApiRequest, redirect_uri:str = None) -> str
     )
 
 
-    ## Get the path portion of the req.url
-    colon_idx = req.url.find(":")
-    if colon_idx == -1: colon_idx = -3
-
     url = redirect_uri
     if url is None or len(url) == 0:
-        url = req.url.path
+        url = req.url.path if type(req) is FastApiRequest else req.path if type(req) is Request else "/"
         if req.url.query and req.url.query != "":
             if req.url.query.startswith("?"):
                 url += req.url.query
@@ -365,7 +361,7 @@ def handle_entra_auth_callback(req: FastApiRequest, default_redirect_url:str = N
     if send_to_url is None or send_to_url == '/' or len(send_to_url) == 0:
         send_to_url = default_redirect_url if default_redirect_url is not None else os.environ.get("DEFAULT_REDIRECT_URL", "/")
 
-    is_secure = 'Secure;' if req.url.startswith("https") else ''
+    is_secure = 'Secure;' if req.url.scheme.startswith("https") else ''
     headers = {
         "Set-Cookie": f"Authorization={id_token};{is_secure} Path=/; Max-Age=28800", # HttpOnly;
         "Location": send_to_url
