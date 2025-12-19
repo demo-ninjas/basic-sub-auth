@@ -268,6 +268,9 @@ def generate_entra_auth_url(req: func.HttpRequest|Request, redirect_uri:str = No
         ## Strip the /api/app/ path from the URL (this is to handle the internal mapping happing on the edge proxy)
         if url.startswith("/api/app/"): url = url[8:]
     
+    if os.environ.get("ENTRA_STATE_STRIP_API_SERVE_PATH", "true").lower() == "true":
+        if url.startswith("/api/serve/"): url = url[10:]
+
     path_prefix = os.environ.get("ENTRA_STATE_REDIRECT_PATH_PREFIX", None)
     if path_prefix is not None:
         if not path_prefix.endswith("/"): path_prefix += "/"
