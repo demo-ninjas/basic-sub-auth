@@ -320,7 +320,7 @@ def handle_entra_auth_callback(req: FastApiRequest, default_redirect_url:str = N
         code  = request.header("code")
     if code is None or len(code) == 0:
         return FastApiResponse(
-            body="Bad Request",
+            content="Bad Request",
             status_code=400
         )
     
@@ -333,8 +333,9 @@ def handle_entra_auth_callback(req: FastApiRequest, default_redirect_url:str = N
 
 
     if "error" in result:
+        print("Error acquiring token: ", result.get("error"), result.get("error_description"))
         return FastApiResponse(
-            body="Not Allowed",
+            content="Not Allowed",
             status_code=401
         )
     
@@ -342,7 +343,7 @@ def handle_entra_auth_callback(req: FastApiRequest, default_redirect_url:str = N
     id_token = result.get("id_token", None)
     if id_token is None:
         return FastApiResponse(
-            body="Not Allowed",
+            content="Not Allowed",
             status_code=401
         )
 
