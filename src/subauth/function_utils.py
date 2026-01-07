@@ -358,9 +358,11 @@ def handle_entra_auth_callback(req: func.HttpRequest|Request, default_redirect_u
     if send_to_url is None or send_to_url == '/' or len(send_to_url) == 0:
         send_to_url = default_redirect_url if default_redirect_url is not None else os.environ.get("DEFAULT_REDIRECT_URL", "/")
 
-    is_secure = 'Secure;' if req.url.startswith("https") else ''
+    max_age = int(os.environ.get("ENTRA_ID_TOKEN_MAX_AGE_SECONDS", "28800")) # 8 hours default
+    same_site = os.environ.get("ENTRA_ID_TOKEN_SAME_SITE", "None")
+    is_secure = f'Secure; SameSite={same_site};' if req.url.startswith("https") else ''
     headers = {
-        "Set-Cookie": f"Authorization={id_token};{is_secure} Path=/; Max-Age=28800", # HttpOnly;
+        "Set-Cookie": f"Authorization={id_token};{is_secure} Path=/; Max-Age={max_age};", # HttpOnly;
         "Location": send_to_url
     }
     return func.HttpResponse(
