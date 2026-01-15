@@ -256,7 +256,7 @@ def generate_entra_auth_url(req: FastApiRequest, redirect_uri:str = None) -> str
 
     url = redirect_uri
     if url is None or len(url) == 0:
-        url = req.url.path if type(req) is FastApiRequest else req.path if type(req) is Request else "/"
+        url = req.url.path
         if req.url.query and req.url.query != "":
             if req.url.query.startswith("?"):
                 url += req.url.query
