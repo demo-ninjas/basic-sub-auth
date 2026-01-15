@@ -364,7 +364,13 @@ def handle_entra_auth_callback(req: FastApiRequest, default_redirect_url:str = N
 
     max_age = int(os.environ.get("ENTRA_ID_TOKEN_MAX_AGE_SECONDS", "28800")) # 8 hours default
     same_site = os.environ.get("ENTRA_ID_TOKEN_SAME_SITE", "None")
-    is_secure = f'Secure; SameSite={same_site};' if req.url.scheme.startswith("https") else ''
+    if same_site not in ["Lax", "Strict", "None"]:
+        same_site = "None"
+    as_secure = req.url.scheme.lower().startswith("https")
+    if not as_secure and os.environ.get("ENTRA_ID_TOKEN_ALLOW_INSECURE", "false").lower() != "true":
+        as_secure = True
+    
+    is_secure = f'Secure; SameSite={same_site};' if as_secure else ''
     headers = {
         "Set-Cookie": f"Authorization={id_token}; {is_secure} Path=/; Max-Age={max_age};", # HttpOnly;
         "Location": send_to_url
