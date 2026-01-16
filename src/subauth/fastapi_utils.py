@@ -55,7 +55,7 @@ def fastapi_req_to_request(req: FastApiRequest, override_path:str = None, disgui
     request = Request(method, host, path, headers, query, client_ip=client_ip)
     return request
     
-def get_sub_from_function_req(req: FastApiRequest) -> Subscription:
+def get_sub_from_function_req(req: FastApiRequest) -> tuple[Subscription, str|None]:
     """
     Get a subscription for the given request.
     """
@@ -81,7 +81,7 @@ def get_sub_from_function_req(req: FastApiRequest) -> Subscription:
         subscription = get_subscription(sub_id, False)
 
     if not subscription:
-        user = get_entra_user_for_request(req)
+        user, reason = get_entra_user_for_request(req)
         if user is not None:
             sub_id = user.get("preferred_username", user.get("upn", None))
             if sub_id is not None:
@@ -90,8 +90,11 @@ def get_sub_from_function_req(req: FastApiRequest) -> Subscription:
                 if subscription is not None:
                     subscription.is_entra_user = True
                     subscription.entra_user_claims = user
-    
-    return subscription
+                    return subscription, reason
+        else: 
+            return None, reason
+
+    return subscription, None
 
 
 def validate_function_request(req: FastApiRequest, override_path:str = None, redirect_on_fail:bool = False, default_fail_status:int = 401, redirect_url:str = None, allow_cors:bool = True, include_reason:bool = True, allow_disguised_host:bool = True) -> tuple[bool, Subscription, FastApiResponse]:
@@ -112,8 +115,7 @@ def validate_function_request(req: FastApiRequest, override_path:str = None, red
         return True, None, response
 
     # Check for the subscription
-    sub = get_sub_from_function_req(req)
-    reason = None
+    sub, reason = get_sub_from_function_req(req)
     if sub is not None:
         # Check if the subscription is allowed to access the resource
         request = fastapi_req_to_request(req, override_path, allow_disguised_host)
@@ -151,16 +153,16 @@ def validate_function_request(req: FastApiRequest, override_path:str = None, red
         return False, sub, response
 
     
-def get_entra_user_for_request(req: FastApiRequest) -> dict[str, any]:
+def get_entra_user_for_request(req: FastApiRequest) -> tuple[dict[str, any], str|None]:
     global __GLOBAL_TOKEN_KEYS
     from jose import jwt
     import os
 
     ## Check that ENTRA_AUTHORITY is set
     if os.environ.get("ENTRA_AUTHORITY") is None:
-        return None
+        return None, "ENTRA_AUTHORITY is not set in the environment variables"
     if os.environ.get("ENTRA_CLIENT_ID") is None:
-        return None
+        return None, "ENTRA_CLIENT_ID is not set in the environment variables"
 
     if __GLOBAL_TOKEN_KEYS is None:
         import requests
@@ -175,11 +177,11 @@ def get_entra_user_for_request(req: FastApiRequest) -> dict[str, any]:
                 key_map[key["kid"]] = key
             __GLOBAL_TOKEN_KEYS = key_map
         except Exception:
-            raise RuntimeError("Unable to load the Keys for validating the auth token")
+            return None, "Unable to retrieve the Keys to validate the auth token"
         
 
     if __GLOBAL_TOKEN_KEYS is None:
-        raise RuntimeError("Unable to retrieve the Keys to validate the auth token")
+        return None, "Unable to retrieve the Keys to validate the auth token"
     
     request = fastapi_req_to_request(req)
 
@@ -199,7 +201,7 @@ def get_entra_user_for_request(req: FastApiRequest) -> dict[str, any]:
         id_token = request.query_param("token")
     
     if id_token is None: 
-        return None
+        return None, "No authorization token found in the request"
     
     if id_token.startswith("BEARER "):
         id_token = id_token.replace("BEARER ", "")
@@ -210,7 +212,7 @@ def get_entra_user_for_request(req: FastApiRequest) -> dict[str, any]:
         unverified_header = jwt.get_unverified_header(id_token)
         rsa_key = __GLOBAL_TOKEN_KEYS.get(unverified_header["kid"], None)
         if rsa_key is None:
-            return None
+            return None, "Unable to find a matching key to validate the auth token"
 
         payload = jwt.decode(
             id_token,
@@ -221,11 +223,11 @@ def get_entra_user_for_request(req: FastApiRequest) -> dict[str, any]:
         )
         return payload
     except jwt.ExpiredSignatureError:
-        return None
+        return None, "The authorization token has expired"
     except jwt.JWTClaimsError:
-        return None
+        return None, "The authorization token has invalid claims"
     except Exception:
-        return None
+        return None, "Unable to validate the authorization token"
 
 
 
