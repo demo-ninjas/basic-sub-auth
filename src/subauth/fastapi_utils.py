@@ -226,8 +226,10 @@ def get_entra_user_for_request(req: FastApiRequest) -> tuple[dict[str, any], str
         return None, "The authorization token has expired"
     except jwt.JWTClaimsError:
         return None, "The authorization token has invalid claims"
-    except Exception:
-        return None, "Unable to validate the authorization token"
+    except Exception as e:
+        import logging
+        logging.error("Error validating token: %s", str(e), exc_info=True, stack_info=True)
+        return None, "Unable to validate the authorization token: " + str(e)
 
 
 
