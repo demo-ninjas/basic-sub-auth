@@ -226,7 +226,7 @@ def get_entra_user_for_request(req: FastApiRequest) -> tuple[dict[str, any], str
             audience=os.environ.get("ENTRA_CLIENT_ID"),
             issuer=os.environ.get("ENTRA_AUTHORITY") + "/v2.0"
         )
-        return payload
+        return payload, None
     except jwt.ExpiredSignatureError:
         return None, "The authorization token has expired"
     except jwt.JWTClaimsError:
