@@ -68,8 +68,8 @@ class Request:
                 cookies = self.headers.get("Cookie", self.headers.get("cookie", None))
                 if cookies:
                     for cookie in cookies.split(";"):
-                        key, value = cookie.split("=")
-                        self.cookies[key.lower()] = value
+                        cookie_key, value = cookie.split("=")
+                        self.cookies[cookie_key.lower()] = value
             else:
                 self.cookies = {}
 
