@@ -209,6 +209,11 @@ def get_entra_user_for_request(req: FastApiRequest) -> tuple[dict[str, any], str
         id_token = id_token.replace("Bearer ", "")
     
     try:
+        if ';' in id_token:
+            id_token = id_token.split(';', 1)[0].strip()
+        else: 
+            id_token = id_token.strip()
+        
         unverified_header = jwt.get_unverified_header(id_token)
         rsa_key = __GLOBAL_TOKEN_KEYS.get(unverified_header["kid"], None)
         if rsa_key is None:
@@ -228,6 +233,7 @@ def get_entra_user_for_request(req: FastApiRequest) -> tuple[dict[str, any], str
         return None, "The authorization token has invalid claims"
     except Exception as e:
         import logging
+        logging.error("Failed Token: %s", id_token)
         logging.error("Error validating token: %s", str(e), exc_info=True, stack_info=True)
         return None, "Unable to validate the authorization token: " + str(e)
 
