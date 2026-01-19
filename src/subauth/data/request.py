@@ -44,13 +44,13 @@ class Request:
                 query = self.urlpath.split("?")[1]
                 if query:
                     for param in query.split("&"):
-                        key, value = param.split("=")
-                        self.query_params[key.lower()] = value
+                        query_key, value = param.split("=")
+                        self.query_params[query_key.strip().lower()] = value.strip()
             else:
                 self.query_params = {}
         
         ## Check if the key is in the query params
-        low_key = key.lower()
+        low_key = key.strip().lower()
         if low_key in self.query_params:
             return self.query_params[low_key]
         
@@ -69,12 +69,12 @@ class Request:
                 if cookies:
                     for cookie in cookies.split(";"):
                         cookie_key, value = cookie.split("=")
-                        self.cookies[cookie_key.lower()] = value
+                        self.cookies[cookie_key.strip().lower()] = value.strip()
             else:
                 self.cookies = {}
 
         ## Check if the key is in the cookies   
-        low_key = key.lower()
+        low_key = key.strip().lower()
         if low_key in self.cookies:
             return self.cookies[low_key]
         return None
